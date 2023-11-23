@@ -39,7 +39,7 @@
     "client.MapRendererMapInstanceMixin",
     "client.PlayerRendererMixin",
     "client.WindowResizeMixin",
-    "client.player.LocalPlayerMixin",
+    "client.player.LocalPlayerMixin"
   ],
   "injectors": {
     "defaultRequire": 1
