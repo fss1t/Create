@@ -9,6 +9,8 @@ import java.util.List;
 import java.util.Map;
 import java.util.WeakHashMap;
 
+import net.minecraft.world.entity.LivingEntity;
+
 import org.apache.commons.lang3.mutable.MutableBoolean;
 import org.apache.commons.lang3.mutable.MutableFloat;
 import org.apache.commons.lang3.mutable.MutableObject;
@@ -382,6 +384,8 @@ public class ContraptionCollider {
 				allowedMovement = collide(contactPointMotion, entity);
 				entity.setPos(entityPosition.x + allowedMovement.x, entityPosition.y,
 					entityPosition.z + allowedMovement.z);
+
+				rotateEntityOnContraption(entity,contraptionEntity);
 			}
 
 			entity.setDeltaMovement(entityMotion);
@@ -402,7 +406,41 @@ public class ContraptionCollider {
 				safetyLock.setRight(entity.getY() - contraptionEntity.getY());
 			}
 		}
+		for (Entity entity : contraptionEntity.getPassengers()) {
+			if (!entity.isAlive())
+				continue;
 
+			PlayerType playerType = getPlayerType(entity);
+			if (playerType == PlayerType.REMOTE && !(contraption instanceof TranslatingContraption))
+				continue;
+
+			entity.getSelfAndPassengers()
+					.forEach(e -> {
+						if (e instanceof ServerPlayer)
+							((ServerPlayer) e).connection.aboveGroundTickCount = 0;
+					});
+
+			if (playerType == PlayerType.SERVER)
+				continue;
+
+			rotateEntityOnContraption(entity,contraptionEntity);
+		}
+	}
+
+	private static void rotateEntityOnContraption(Entity entity, AbstractContraptionEntity contraption){
+		if(contraption instanceof OrientedContraptionEntity oContraption) {
+			float yawDelta = oContraption.yaw - oContraption.prevYaw;
+			if(yawDelta<-180F)
+				yawDelta+=360F;
+			else if(180F<yawDelta)
+				yawDelta-=360F;
+
+			entity.setYRot(entity.getYRot() + yawDelta);
+			if(entity instanceof LivingEntity livingEntity){
+				livingEntity.yHeadRot+=yawDelta;
+				livingEntity.yBodyRot+=yawDelta;
+			}
+		}
 	}
 
 	private static int packetCooldown = 0;
