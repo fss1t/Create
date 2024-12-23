@@ -95,6 +95,8 @@ public class SchematicHandler implements IGuiOverlay {
 		if (activeSchematicItem != null && transformation != null)
 			transformation.tick();
 
+		renderers.forEach(SchematicRenderer::tick);
+
 		LocalPlayer player = mc.player;
 		ItemStack stack = findBlueprintInHand(player);
 		if (stack == null) {
@@ -110,12 +112,13 @@ public class SchematicHandler implements IGuiOverlay {
 
 		if (!active || !stack.getTag()
 			.getString("File")
-			.equals(displayedSchematic))
+			.equals(displayedSchematic)) {
+			renderers.forEach(r -> r.setActive(false));
 			init(player, stack);
+		}
 		if (!active)
 			return;
 
-		renderers.forEach(SchematicRenderer::tick);
 		if (syncCooldown > 0)
 			syncCooldown--;
 		if (syncCooldown == 1)
@@ -158,9 +161,12 @@ public class SchematicHandler implements IGuiOverlay {
 		BlockPos pos;
 
 		pos = BlockPos.ZERO;
-		
+
 		try {
 			schematic.placeInWorld(w, pos, pos, placementSettings, w.getRandom(), Block.UPDATE_CLIENTS);
+			for (BlockEntity blockEntity : w.getBlockEntities())
+				blockEntity.setLevel(w);
+			w.fixControllerBlockEntities();
 		} catch (Exception e) {
 			Minecraft.getInstance().player.displayClientMessage(Lang.translate("schematic.error")
 				.component(), false);
@@ -175,6 +181,7 @@ public class SchematicHandler implements IGuiOverlay {
 			placementSettings.getMirror());
 		for (BlockEntity be : wMirroredFB.getRenderedBlockEntities())
 			transform.apply(be);
+		wMirroredFB.fixControllerBlockEntities();
 
 		placementSettings.setMirror(Mirror.LEFT_RIGHT);
 		pos = BlockPos.ZERO.south(size.getZ() - 1);
@@ -183,6 +190,7 @@ public class SchematicHandler implements IGuiOverlay {
 			placementSettings.getMirror());
 		for (BlockEntity be : wMirroredLR.getRenderedBlockEntities())
 			transform.apply(be);
+		wMirroredLR.fixControllerBlockEntities();
 
 		renderers.get(0)
 			.display(w);

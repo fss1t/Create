@@ -30,6 +30,7 @@ import com.simibubi.create.content.kinetics.belt.transport.ItemHandlerBeltSegmen
 import com.simibubi.create.content.kinetics.belt.transport.TransportedItemStack;
 import com.simibubi.create.content.logistics.tunnel.BrassTunnelBlockEntity;
 import com.simibubi.create.foundation.blockEntity.behaviour.BlockEntityBehaviour;
+import com.simibubi.create.foundation.blockEntity.behaviour.inventory.VersionedInventoryTrackerBehaviour;
 import com.simibubi.create.foundation.utility.NBTHelper;
 
 import net.minecraft.client.renderer.LightTexture;
@@ -72,6 +73,7 @@ public class BeltBlockEntity extends KineticBlockEntity {
 	protected BlockPos controller;
 	protected BeltInventory inventory;
 	protected LazyOptional<IItemHandler> itemHandler;
+	public VersionedInventoryTrackerBehaviour invVersionTracker;
 
 	public CompoundTag trackerUpdateTag;
 
@@ -97,6 +99,7 @@ public class BeltBlockEntity extends KineticBlockEntity {
 			.setInsertionHandler(this::tryInsertingFromSide).considerOccupiedWhen(this::isOccupied));
 		behaviours.add(new TransportedItemStackHandlerBehaviour(this, this::applyToAllItems)
 			.withStackPlacement(this::getWorldPositionOf));
+		behaviours.add(invVersionTracker = new VersionedInventoryTrackerBehaviour(this));
 	}
 
 	@Override
@@ -183,6 +186,8 @@ public class BeltBlockEntity extends KineticBlockEntity {
 	@Override
 	public <T> LazyOptional<T> getCapability(Capability<T> cap, Direction side) {
 		if (!isItemHandlerCap(cap))
+			return super.getCapability(cap, side);
+		if (!BeltBlock.canTransportObjects(getBlockState()))
 			return super.getCapability(cap, side);
 		if (!isRemoved() && !itemHandler.isPresent())
 			initializeItemHandler();
@@ -485,6 +490,8 @@ public class BeltBlockEntity extends KineticBlockEntity {
 		ItemStack inserted = transportedStack.stack;
 		ItemStack empty = ItemStack.EMPTY;
 
+		if (!BeltBlock.canTransportObjects(getBlockState()))
+			return inserted;
 		if (nextBeltController == null)
 			return inserted;
 		BeltInventory nextInventory = nextBeltController.getInventory();
